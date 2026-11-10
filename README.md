@@ -13,3 +13,5 @@ docs/       SPEC.md, the contract both sides must agree on
 ```
 
 Training happens offline. The only thing that crosses from `training/` to `web/` is the exported model in `web/models/`.
+
+Build plan and progress: [docs/ROADMAP.md](docs/ROADMAP.md)
