@@ -3,25 +3,30 @@
 The agent is trained in Python and runs in JavaScript. If anything below differs between the two sides, the demo breaks silently: the agent still "plays", but it makes nonsense moves. Fill this in as you make decisions and treat it as the source of truth for both sides.
 
 ## Board
-- Representation: _values (2, 4, 8…) or exponents (1, 2, 3…)?_
-- Cell order when flattened: _row-major, top-left first?_
-- Empty cell value: _0?_
+- Representation: exponents, the log₂ of the tile value (2 → 1, 4 → 2, …, 2048 → 11). Convert back with 2ᵉ only for display.
+- Cell order when flattened: row-major, top-left first. Cell index = 4 × row + col.
+- Empty cell value: 0.
 
 ## Actions
 | Index | Move |
 |---|---|
-| 0 | _?_ |
-| 1 | _?_ |
-| 2 | _?_ |
-| 3 | _?_ |
+| 0 | Up |
+| 1 | Down |
+| 2 | Left |
+| 3 | Right |
 
 ## Tile spawning
 - Spawns in a uniformly random empty cell: a 2 with probability 0.9, a 4 with probability 0.1.
 - Only after a move that changed the board.
+- RNG algorithm: _which seedable PRNG? It must give the same numbers in Python and JS for the same seed_
+- Draws per spawn: _how many random numbers each spawn uses, and how each one maps to a cell and to a 2 or 4_
+- Empty-cell order for picking a cell: _row-major?_
 
 ## Reward
-- Definition: _?_
-- Illegal move handling: _masked (never chosen) or penalized?_
+- Definition: the sum of the new tile's exponent over every merge in the move. Two tiles with exponent `e` merge into `e + 1` and add `e + 1` to the reward. A move with no merges gives 0.
+- Used for training only. Agents are evaluated on the real game score and max tile.
+- Illegal move handling: masked, never penalized. Illegal actions are never chosen when acting, including ε-greedy random picks, and the TD target's max over next-state Q-values covers legal actions only.
+- Game over: no extra penalty. The TD target for the final transition is just its reward, with no bootstrap term.
 
 ## Network input
 - Encoding: _e.g. one-hot per cell, K channels_
@@ -40,11 +45,20 @@ The agent is trained in Python and runs in JavaScript. If anything below differs
 ## Golden test cases
 Boards with known correct results. Check both the Python tests and the JS engine against these.
 
-| Row before | After sliding left | Points gained |
-|---|---|---|
-| 2 2 2 2 | 4 4 0 0 | 8 |
-| 2 2 4 0 | 4 4 0 0 | 4 |
-| 4 0 0 4 | 8 0 0 0 | 8 |
-| 2 4 8 16 | 2 4 8 16 (not a legal move) | 0 |
+| Row before | After sliding left | Points gained | Reward |
+|---|---|---|---|
+| 2 2 2 2 | 4 4 0 0 | 8 | 4 (2 + 2) |
+| 2 2 4 0 | 4 4 0 0 | 4 | 2 |
+| 4 0 0 4 | 8 0 0 0 | 8 | 3 |
+| 2 4 8 16 | 2 4 8 16 (not a legal move) | 0 | n/a (masked) |
+| 0 0 0 2 | 2 0 0 0 | 0 | 0 |
+| 2 2 2 0 | 4 2 0 0 | 4 | 2 |
+| 4 2 2 0 | 4 4 0 0 | 4 | 2 |
+| 2 2 4 4 | 4 8 0 0 | 12 | 5 (2 + 3) |
+| 0 2 0 2 | 4 0 0 0 | 4 | 2 |
+| 2 0 2 2 | 4 2 0 0 | 4 | 2 |
+| 2048 2048 0 0 | 4096 0 0 0 | 4096 | 12 |
+| 2 4 2 4 | 2 4 2 4 (not a legal move) | 0 | n/a (masked) |
+| 8 0 0 0 | 8 0 0 0 (not a legal move) | 0 | n/a (masked) |
 
 _Add more as you find edge cases. Add the Q-value fixtures from `training/export.py` here too, or link to a fixture file next to the model, so you can check the JS forward pass._
