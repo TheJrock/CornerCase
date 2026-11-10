@@ -3,8 +3,8 @@
 Work through these roughly in order. Each file's header comment has the details for that file, and the decisions go in [SPEC.md](SPEC.md).
 
 ## 1. Commit the scaffolding
-- [ ] Review the placeholder files and commit them
-- [ ] Make sure the repo is public (GitHub Pages on the free plan requires it)
+- [x] Review the placeholder files and commit them
+- [x] Make sure the repo is public (GitHub Pages on the free plan requires it)
 
 ## 2. Set up Python
 Use Homebrew's Python 3.12 with a plain venv, not conda. Run from `training/`:
@@ -14,16 +14,17 @@ conda deactivate                          # if (base) is showing
 source .venv/bin/activate                 # `source`, not `python`
 which python                              # should end in training/.venv/bin/python
 ```
-- [ ] venv created and activated
-- [ ] Dependencies chosen in `requirements.txt`, then `pip install -r requirements.txt`
+- [x] venv created and activated
+- [x] Dependencies chosen in `requirements.txt`, then `pip install -r requirements.txt`
 
 ## 3. Make the first spec decisions
-- [ ] Board representation (values or exponents) in SPEC.md
-- [ ] Action index order in SPEC.md
+- [x] Board representation (values or exponents) in SPEC.md
+- [x] Action index order in SPEC.md
 
 ## 4. Game engine and tests
 `game.py`, `tests/test_game.py`
-- [ ] Tests for merge rules, spawning, legal moves, game over
+- [x] Tests for merge rules, spawning, legal moves, game over
+- [x] Spawning uses a seeded RNG you pass into the game, not the global `random` (see SPEC.md → Tile spawning)
 - [ ] `pytest` passes
 - [ ] Get it correct first, then make it fast: training runs millions of moves through it
 
@@ -59,3 +60,11 @@ You can do this any time after step 1, but **keep the sub-steps in this order**:
 - [ ] Turn on Enforce HTTPS once the certificate is issued
 
 If you add the DNS record before the repo claims the subdomain, someone else can claim it. Verifying your domain under your GitHub account's Settings → Pages protects every subdomain, and you can do that at any time.
+
+## 9. N-tuple benchmark (after DQN beats the corner heuristic)
+A second, non-neural agent to compare DQN against, side by side in the browser.
+- [ ] Afterstate TD(0) learner: a few tuples, each shared across the 8 board symmetries
+- [ ] Tuple sizes small enough to ship to the browser (a 4-tuple table is 256 KB, a 6-tuple table is 64 MB)
+- [ ] Engine fast enough for ~10⁸ training moves (numba or a bitboard engine)
+- [ ] DQN vs. n-tuple in `evaluate.py` on the same set of seeds
+- [ ] Browser: both agents play side by side from the same seed

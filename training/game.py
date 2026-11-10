@@ -32,3 +32,34 @@ far fewer bugs than four hand-written versions.
 Speed matters: training plays millions of moves. Get it correct first (tests!),
 then make it fast.
 """
+
+import numpy as np
+
+class CornerCaseEnv():    
+    def __init__(self, rng=None):
+        self.rng = rng or np.random.default_rng()
+        self.board = np.zeros((4, 4), dtype=int)
+        self.score = 0
+        self.reset()
+
+    def reset(self):
+        self.board.fill(0)
+        self.score = 0
+        self.spawn_tile()
+        self.spawn_tile()
+        return self.board.copy()
+
+    def spawn_tile(self):
+        pass
+
+    def step(self, action):
+        pass
+
+    def legal_moves(self):
+        pass
+
+    def game_over(self):
+        return not any(self.legal_moves())
+
+
+
