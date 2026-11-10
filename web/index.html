@@ -1,0 +1,19 @@
+<!--
+  The page for the demo.
+
+  What goes here:
+    - <head>: title, viewport meta tag (so it works on phones), a link to style.css.
+    - A container for the 4x4 board (renderer.js fills it in).
+    - Score and highest-tile display.
+    - Controls: play/pause the agent, step one move, speed slider, new game.
+      Optional: let a human play with the arrow keys, and a checkpoint picker
+      ("early / mid / final") to show how the agent improved during training.
+    - A short explanation of what's happening (what DQN is, a link to the repo).
+    - <script type="module" src="js/main.js"></script>
+      ES modules mean no bundler and no build step: the browser loads these
+      files as they are, so deploying is just uploading this folder.
+
+  Local testing: ES modules and fetch() don't work when you open the file
+  directly (file://). Serve the folder instead:
+      cd web && python -m http.server 8000    then open http://localhost:8000
+-->

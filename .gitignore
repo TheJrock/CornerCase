@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Training outputs: large, regenerable, not needed by the website
+training/checkpoints/*
+!training/checkpoints/.gitkeep
+training/runs/
+
+# NOTE: web/models/ is intentionally NOT ignored. The exported model must be
+# committed so the deploy workflow can ship it to the site.
+
+# OS
+.DS_Store

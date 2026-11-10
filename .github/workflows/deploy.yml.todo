@@ -1,0 +1,23 @@
+# Deploys web/ to GitHub Pages on every push to main.
+#
+# This file ends in .todo so GitHub ignores it. Rename it to deploy.yml once
+# it's filled in. GitHub only runs .yml/.yaml files in this folder, and an
+# unfinished one would fail on every push.
+#
+# Starting point: in repo Settings -> Pages, set Source to "GitHub Actions" and
+# GitHub suggests a "Static HTML" starter workflow. It's close to what you
+# need; read every line of it before using it.
+#
+# What this workflow needs to do:
+#   1. Trigger: on push to main, plus workflow_dispatch so you can run it by hand.
+#      Optional: only run when files under web/ change (a paths filter).
+#   2. Permissions: contents: read, pages: write, id-token: write.
+#   3. Steps:
+#        - check out the repo
+#        - configure Pages
+#        - upload web/ as the Pages artifact   <- the starter uploads the whole
+#                                                 repo; change the path to web/
+#        - deploy the artifact
+#
+# Note: when you deploy with Actions, you set the custom domain in repo
+# Settings -> Pages. A CNAME file in the site folder is ignored.

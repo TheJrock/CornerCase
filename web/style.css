@@ -1,0 +1,10 @@
+/*
+  Styles for the demo.
+
+  - The board: a 4x4 CSS grid with gaps. Keep it square at any screen width
+    (aspect-ratio: 1 helps).
+  - Tiles: one color per value, getting more intense as tiles grow. Pick your
+    own palette.
+  - Optional: transitions for slides and merges. Animation is polish; do it last.
+  - Make sure it works at phone width. People often open portfolio links on mobile.
+*/

@@ -1,0 +1,9 @@
+# Python dependencies for training.
+# Uncomment what you actually use, then pin versions once things work (pip freeze).
+#
+# numpy        # board representation, game logic, replay buffer storage
+# torch        # Q-network, optimizer, training loop
+# pytest       # running tests/
+# onnx         # only if you export with torch.onnx.export (it may ask for onnxscript too)
+# tensorboard  # optional: live training curves (or just print / write a CSV)
+# matplotlib   # optional: plot score curves after training
