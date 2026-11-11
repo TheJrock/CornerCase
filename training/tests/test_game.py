@@ -11,7 +11,7 @@ What these tests assume about CornerCaseEnv:
   - env.board is a 4x4 integer array, and env.score is the game score in points.
   - env.step(action) -> (next_state, reward, done, info). An illegal action
     leaves everything unchanged and gives a reward of 0.
-  - env.legal_moves() returns 4 booleans in action-index order.
+  - env.legal_action_mask() returns 4 booleans in action-index order.
   - env.spawn_tile() adds one tile to a random empty cell.
 
 The cases in LINE_CASES and ILLEGAL_LINES are also listed in docs/SPEC.md so
@@ -127,7 +127,7 @@ def test_illegal_move_changes_nothing(line, action):
     assert np.array_equal(env.board, before), "an illegal move changed the board or spawned a tile"
     assert env.score == 0
     assert reward == 0
-    assert not env.legal_moves()[action]
+    assert not env.legal_action_mask()[action]
 
 
 # A whole board where every row and column does something different. The
@@ -262,7 +262,7 @@ def test_two_envs_dont_share_a_board():
 
 # ---------------------------------------------------------------- legal moves and game over
 
-def test_legal_moves_is_a_mask_in_action_order():
+def test_legal_action_mask_is_a_mask_in_action_order():
     # Every tile is against the left wall and nothing can merge, so only
     # RIGHT changes the board.
     env = make_env([
@@ -271,7 +271,7 @@ def test_legal_moves_is_a_mask_in_action_order():
         [3, 0, 0, 0],
         [4, 0, 0, 0],
     ])
-    assert list(env.legal_moves()) == [False, False, False, True]
+    assert list(env.legal_action_mask()) == [False, False, False, True]
 
 
 def test_full_board_with_a_vertical_pair_allows_only_up_and_down():
@@ -281,7 +281,7 @@ def test_full_board_with_a_vertical_pair_allows_only_up_and_down():
         [2, 3, 4, 5],
         [3, 4, 5, 6],
     ])
-    assert list(env.legal_moves()) == [True, True, False, False]
+    assert list(env.legal_action_mask()) == [True, True, False, False]
     assert not env.game_over()
 
 
@@ -292,7 +292,7 @@ def test_full_board_with_a_horizontal_pair_allows_only_left_and_right():
         [3, 6, 4, 5],
         [4, 7, 5, 6],
     ])
-    assert list(env.legal_moves()) == [False, False, True, True]
+    assert list(env.legal_action_mask()) == [False, False, True, True]
     assert not env.game_over()
 
 
@@ -306,7 +306,7 @@ CHECKERBOARD = [
 
 def test_full_board_with_no_merges_is_game_over():
     env = make_env(CHECKERBOARD)
-    assert list(env.legal_moves()) == [False, False, False, False]
+    assert list(env.legal_action_mask()) == [False, False, False, False]
     assert env.game_over()
 
 
@@ -317,11 +317,11 @@ def test_board_with_an_empty_cell_is_not_game_over():
     assert not env.game_over()
 
 
-def test_legal_moves_and_game_over_dont_change_anything():
+def test_legal_action_mask_and_game_over_dont_change_anything():
     # A common bug: checking legality by actually running each move.
     env = make_env(FULL_BOARD)
     before = env.board.copy()
-    env.legal_moves()
+    env.legal_action_mask()
     env.game_over()
     assert np.array_equal(env.board, before)
     assert env.score == 0
@@ -354,7 +354,7 @@ def play_first_legal_move(env, max_moves=300):
     """Play the lowest-index legal move each turn. Returns every board seen and the final score."""
     boards = [env.board.copy()]
     for _ in range(max_moves):
-        legal = env.legal_moves()
+        legal = env.legal_action_mask()
         if not any(legal):
             break
         env.step(int(np.flatnonzero(legal)[0]))

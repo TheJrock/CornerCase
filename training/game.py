@@ -36,6 +36,10 @@ then make it fast.
 import numpy as np
 
 class CornerCaseEnv():    
+
+    UP, DOWN, LEFT, RIGHT = 0, 1, 2, 3
+    ROTATIONS = {UP: 1, DOWN: -1, LEFT: 0, RIGHT: 2}
+
     def __init__(self, rng=None):
         self.rng = rng or np.random.default_rng()
         self.board = np.zeros((4, 4), dtype=int)
@@ -49,17 +53,77 @@ class CornerCaseEnv():
         self.spawn_tile()
         return self.board.copy()
 
-    def spawn_tile(self):
-        pass
-
     def step(self, action):
-        pass
+        info = {}
+        self.board, reward, moved, points = self.slide(self.board, int(action))
+        self.score += points
+        if moved:
+            self.spawn_tile()
+        return self.board.copy(), reward, self.game_over(), info
 
-    def legal_moves(self):
-        pass
+    def legal_action_mask(self):
+        moves = [False, False, False, False]
+        for action in self.ROTATIONS:
+            _, _, moved, _ = self.slide(self.board, action)
+            if moved:
+                moves[action] = True
+        return moves
 
     def game_over(self):
-        return not any(self.legal_moves())
+        return not any(self.legal_action_mask())
 
+    def spawn_tile(self):
+        empty_cells = np.flatnonzero(self.board == 0)
+        if empty_cells.size > 0:
+            idx = empty_cells[self.rng.integers(len(empty_cells))]
+            self.board.flat[idx] = 1 if self.rng.random() < 0.9 else 2
+        else:
+            raise RuntimeError("No empty cells to spawn a new tile.")
 
+    @classmethod
+    def slide(cls, board, action):
+        board = board.copy()
+        k = cls.ROTATIONS.get(action)
+        if k is None:
+            raise ValueError(f"Invalid action: {action}")
+        board = np.rot90(board, k)
+        board, reward, moved, points = cls._slide_left(board)
+        board = np.rot90(board, -k)
+        return board, reward, moved, points
 
+    @classmethod
+    def _slide_left(cls, board):
+        moved = False
+        points = 0
+        reward = 0
+        for i in range(4):
+            row = board[i]
+            new_row, row_points, row_reward = cls._slide_row_left(row)
+            if not np.array_equal(row, new_row):
+                moved = True
+            reward += row_reward
+            points += row_points
+            board[i] = new_row
+        return board, reward, moved, points
+
+    @staticmethod
+    def _slide_row_left(row):
+        non_zero = row[row != 0]
+        new_row = np.zeros_like(row)
+        skip = False
+        j = 0
+        points = 0
+        reward = 0
+        for i in range(len(non_zero)):
+            if skip:
+                skip = False
+                continue
+            if i + 1 < len(non_zero) and non_zero[i] == non_zero[i + 1]:
+                new_row[j] = non_zero[i] + 1
+                points += 2 ** new_row[j]
+                reward += new_row[j]
+                skip = True
+            else:
+                new_row[j] = non_zero[i]
+            j += 1
+        return new_row, points, reward
