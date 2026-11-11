@@ -43,28 +43,47 @@ class CornerCaseEnv():
     def __init__(self, rng=None):
         self.rng = rng or np.random.default_rng()
         self.board = np.zeros((4, 4), dtype=int)
+        self.cache = {}
         self.score = 0
         self.reset()
+
+    def set_board(self, board):
+        if board.shape != (4, 4):
+            raise ValueError("Board must be a 4x4 array.")
+        self.board = board.copy()
+        self.build_cache()
+
+    def build_cache(self):
+        for action in self.ROTATIONS:
+            self.cache[action] = self.slide(self.board, action)
 
     def reset(self):
         self.board.fill(0)
         self.score = 0
         self.spawn_tile()
         self.spawn_tile()
+        self.build_cache()
         return self.board.copy()
 
     def step(self, action):
         info = {}
-        self.board, reward, moved, points = self.slide(self.board, int(action))
+        self.board, reward, moved, points = self.cache[int(action)]
+        self.board = self.board.copy()
         self.score += points
+        afterstate = self.board.copy()
         if moved:
             self.spawn_tile()
-        return self.board.copy(), reward, self.game_over(), info
+            self.build_cache()
+        mask = self.legal_action_mask()
+        done = not any(mask)
+        info["legal_actions"] = mask
+        info["afterstate"] = afterstate
+        return self.board.copy(), reward, done, info
 
     def legal_action_mask(self):
         moves = [False, False, False, False]
-        for action in self.ROTATIONS:
-            _, _, moved, _ = self.slide(self.board, action)
+        for action in self.cache:
+            _, _, moved, _ = self.cache[action]
             if moved:
                 moves[action] = True
         return moves

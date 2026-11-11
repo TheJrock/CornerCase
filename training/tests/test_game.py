@@ -38,7 +38,7 @@ def make_rng(seed):
 def make_env(rows, seed=0):
     """An env holding a hand-made board (in exponents) with a score of 0."""
     env = CornerCaseEnv(rng=make_rng(seed))
-    env.board = np.array(rows, dtype=env.board.dtype)
+    env.set_board(np.array(rows, dtype=env.board.dtype))
     env.score = 0
     return env
 
