@@ -35,6 +35,17 @@ then make it fast.
 
 import numpy as np
 
+MAX_EXPONENT = 15
+
+LEFT_ROWS = np.zeros(((MAX_EXPONENT + 1)**4, 4), dtype=int)
+LEFT_POINTS = np.zeros((MAX_EXPONENT + 1)**4, dtype=int)
+LEFT_REWARDS = np.zeros((MAX_EXPONENT + 1)**4, dtype=int)
+LEFT_MOVED = np.zeros((MAX_EXPONENT + 1)**4, dtype=bool)
+RIGHT_ROWS = np.zeros(((MAX_EXPONENT + 1)**4, 4), dtype=int)
+RIGHT_POINTS = np.zeros((MAX_EXPONENT + 1)**4, dtype=int)
+RIGHT_REWARDS = np.zeros((MAX_EXPONENT + 1)**4, dtype=int)
+RIGHT_MOVED = np.zeros((MAX_EXPONENT + 1)**4, dtype=bool)
+
 class CornerCaseEnv():    
 
     UP, DOWN, LEFT, RIGHT = 0, 1, 2, 3
@@ -50,6 +61,10 @@ class CornerCaseEnv():
     def set_board(self, board):
         if board.shape != (4, 4):
             raise ValueError("Board must be a 4x4 array.")
+        if np.any(board > MAX_EXPONENT):
+            raise ValueError(f"Tile values greater than {2**MAX_EXPONENT:,} are not allowed.")
+        if np.any(board < 0):
+            raise ValueError("Tile values must be non-negative.")
         self.board = board.copy()
         self.build_cache()
 
@@ -67,8 +82,10 @@ class CornerCaseEnv():
 
     def step(self, action):
         info = {}
-        self.board, reward, moved, points = self.cache[int(action)]
-        self.board = self.board.copy()
+        next_board, reward, moved, points = self.cache[int(action)]
+        if np.any(next_board > MAX_EXPONENT):
+            raise ValueError(f"Merging two {2**MAX_EXPONENT:,} tiles would make a {2**(MAX_EXPONENT+1):,} tile, which the lookup tables can't hold.")
+        self.board = next_board.copy()
         self.score += points
         afterstate = self.board.copy()
         if moved:
@@ -112,18 +129,23 @@ class CornerCaseEnv():
 
     @classmethod
     def _slide_left(cls, board):
-        moved = False
-        points = 0
-        reward = 0
+        row_indeces = cls._encode_row(board)
+        new_board = LEFT_ROWS[row_indeces]
+        reward = np.sum(LEFT_REWARDS[row_indeces])
+        moved = np.any(LEFT_MOVED[row_indeces])
+        points = np.sum(LEFT_POINTS[row_indeces])
+        return new_board, reward, moved, points
+
+    @staticmethod
+    def _encode_row(row):
+        return np.dot(row, [1, (MAX_EXPONENT + 1), (MAX_EXPONENT + 1)**2, (MAX_EXPONENT + 1)**3])
+
+    @staticmethod
+    def _decode_row(encoded):
+        row = np.zeros(4, dtype=int)
         for i in range(4):
-            row = board[i]
-            new_row, row_points, row_reward = cls._slide_row_left(row)
-            if not np.array_equal(row, new_row):
-                moved = True
-            reward += row_reward
-            points += row_points
-            board[i] = new_row
-        return board, reward, moved, points
+            row[i] = (encoded // ((MAX_EXPONENT + 1) ** i)) % (MAX_EXPONENT + 1)
+        return row
 
     @staticmethod
     def _slide_row_left(row):
@@ -146,3 +168,20 @@ class CornerCaseEnv():
                 new_row[j] = non_zero[i]
             j += 1
         return new_row, points, reward
+
+def _build_lookup_tables():
+    for i in range((MAX_EXPONENT + 1)**4):
+        row = CornerCaseEnv._decode_row(i)
+        left_row, left_points, left_reward = CornerCaseEnv._slide_row_left(row)
+        right_row, right_points, right_reward = CornerCaseEnv._slide_row_left(row[::-1])
+        right_row = right_row[::-1]
+        LEFT_ROWS[i] = left_row
+        LEFT_POINTS[i] = left_points
+        LEFT_REWARDS[i] = left_reward
+        LEFT_MOVED[i] = not np.array_equal(row, left_row)
+        RIGHT_ROWS[i] = right_row
+        RIGHT_POINTS[i] = right_points
+        RIGHT_REWARDS[i] = right_reward
+        RIGHT_MOVED[i] = not np.array_equal(row, right_row)
+
+_build_lookup_tables()
