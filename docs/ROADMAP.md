@@ -25,7 +25,7 @@ which python                              # should end in training/.venv/bin/pyt
 `game.py`, `tests/test_game.py`
 - [x] Tests for merge rules, spawning, legal moves, game over
 - [x] Spawning uses a seeded RNG you pass into the game, not the global `random` (see SPEC.md → Tile spawning)
-- [ ] `pytest` passes
+- [x] `pytest` passes
 - [ ] Get it correct first, then make it fast: training runs millions of moves through it
 
 ## 5. Baselines
@@ -38,6 +38,7 @@ which python                              # should end in training/.venv/bin/pyt
 ## 6. DQN
 `encoding.py` → `network.py` → `replay_buffer.py` → `agent.py` → `config.py` → `train.py`
 - [ ] Remaining SPEC decisions: encoding, reward, network shape
+- [ ] Replay buffer stores the afterstate (after the slide, before the spawn) as well as the next state, so step 10 needs no buffer changes
 - [ ] Short end-to-end run with a tiny config (finds bugs in minutes instead of hours)
 - [ ] Full training run, keeping checkpoints from early, mid and late in training
 - [ ] Beats the corner heuristic in `evaluate.py`
@@ -68,3 +69,15 @@ A second, non-neural agent to compare DQN against, side by side in the browser.
 - [ ] Engine fast enough for ~10⁸ training moves (numba or a bitboard engine)
 - [ ] DQN vs. n-tuple in `evaluate.py` on the same set of seeds
 - [ ] Browser: both agents play side by side from the same seed
+
+## 10. Experiment: spawn noise in the TD target (any time after step 6)
+Does removing the randomness of the spawn from the target speed up learning? Everything except the target stays the same.
+- [ ] A `target_mode` setting in `config.py`:
+  - `sampled`: standard DQN, bootstrapping from the real next state
+  - `expected`: probability-weighted average over every possible spawn on the afterstate
+  - `afterstate` (optional control): bootstrap from the afterstate with no spawn, which should overestimate Q
+- [ ] `game.py` can list every spawn outcome of a board with its probability, tested: 2 × empties outcomes, probabilities sum to 1
+- [ ] 3 to 5 training seeds per mode, compared at equal environment steps, with wall-clock time noted
+- [ ] Periodic greedy evaluation on one fixed set of evaluation seeds for every run
+- [ ] Logged per run: evaluation score and max tile, TD loss, TD-error spread, and predicted Q against the actual return
+- [ ] A short write-up of what you found
