@@ -767,7 +767,7 @@ def test_step_rejects_an_action_outside_0_to_3(action):
 # the eight tables into one structure.
 
 def encode_row(row):
-    return CornerCaseEnv._encode_row(row)
+    return np.dot(row, game.WEIGHTS)
 
 
 def decode_row(index):

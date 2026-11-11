@@ -26,7 +26,7 @@ which python                              # should end in training/.venv/bin/pyt
 - [x] Tests for merge rules, spawning, legal moves, game over
 - [x] Spawning uses a seeded RNG you pass into the game, not the global `random` (see SPEC.md → Tile spawning)
 - [x] `pytest` passes
-- [ ] Get it correct first, then make it fast: training runs millions of moves through it
+- [x] Get it correct first, then make it fast: training runs millions of moves through it
 
 ## 5. Baselines
 `evaluate.py`

@@ -45,11 +45,13 @@ RIGHT_ROWS = np.zeros(((MAX_EXPONENT + 1)**4, 4), dtype=int)
 RIGHT_POINTS = np.zeros((MAX_EXPONENT + 1)**4, dtype=int)
 RIGHT_REWARDS = np.zeros((MAX_EXPONENT + 1)**4, dtype=int)
 RIGHT_MOVED = np.zeros((MAX_EXPONENT + 1)**4, dtype=bool)
+LEFT_TABLES = (LEFT_ROWS, LEFT_REWARDS, LEFT_MOVED, LEFT_POINTS)
+RIGHT_TABLES = (RIGHT_ROWS, RIGHT_REWARDS, RIGHT_MOVED, RIGHT_POINTS)
+WEIGHTS = np.array([1, (MAX_EXPONENT + 1), (MAX_EXPONENT + 1)**2, (MAX_EXPONENT + 1)**3])
 
 class CornerCaseEnv():    
 
     UP, DOWN, LEFT, RIGHT = 0, 1, 2, 3
-    ROTATIONS = {UP: 1, DOWN: -1, LEFT: 0, RIGHT: 2}
 
     def __init__(self, rng=None):
         self.rng = rng or np.random.default_rng()
@@ -69,8 +71,20 @@ class CornerCaseEnv():
         self.build_cache()
 
     def build_cache(self):
-        for action in self.ROTATIONS:
-            self.cache[action] = self.slide(self.board, action)
+        row_indeces = self.board @ WEIGHTS
+        col_indeces = WEIGHTS @ self.board
+        self.cache[self.LEFT] = self._action_lookup(row_indeces, LEFT_TABLES, False)
+        self.cache[self.RIGHT] = self._action_lookup(row_indeces, RIGHT_TABLES, False)
+        self.cache[self.UP] = self._action_lookup(col_indeces, LEFT_TABLES, True)
+        self.cache[self.DOWN] = self._action_lookup(col_indeces, RIGHT_TABLES, True)
+
+    @staticmethod
+    def _action_lookup(indices, tables, transpose):
+        board = tables[0][indices].T if transpose else tables[0][indices]
+        reward = np.sum(tables[1][indices])
+        moved = np.any(tables[2][indices])
+        points = np.sum(tables[3][indices])
+        return board, reward, moved, points
 
     def reset(self):
         self.board.fill(0)
@@ -115,30 +129,6 @@ class CornerCaseEnv():
             self.board.flat[idx] = 1 if self.rng.random() < 0.9 else 2
         else:
             raise RuntimeError("No empty cells to spawn a new tile.")
-
-    @classmethod
-    def slide(cls, board, action):
-        board = board.copy()
-        k = cls.ROTATIONS.get(action)
-        if k is None:
-            raise ValueError(f"Invalid action: {action}")
-        board = np.rot90(board, k)
-        board, reward, moved, points = cls._slide_left(board)
-        board = np.rot90(board, -k)
-        return board, reward, moved, points
-
-    @classmethod
-    def _slide_left(cls, board):
-        row_indeces = cls._encode_row(board)
-        new_board = LEFT_ROWS[row_indeces]
-        reward = np.sum(LEFT_REWARDS[row_indeces])
-        moved = np.any(LEFT_MOVED[row_indeces])
-        points = np.sum(LEFT_POINTS[row_indeces])
-        return new_board, reward, moved, points
-
-    @staticmethod
-    def _encode_row(row):
-        return np.dot(row, [1, (MAX_EXPONENT + 1), (MAX_EXPONENT + 1)**2, (MAX_EXPONENT + 1)**3])
 
     @staticmethod
     def _decode_row(encoded):
