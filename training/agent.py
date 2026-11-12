@@ -20,3 +20,51 @@ Gotchas:
   - An upgrade worth trying once basic DQN works: Double DQN (pick a' with the
     online network, score it with the target network).
 """
+
+import numpy as np
+from game import CornerCaseEnv
+
+class RandomAgent:
+    def __init__(self, rng=None):
+        self.rng = np.random.default_rng(rng)
+
+    def reset(self, rng=None):
+        self.rng = np.random.default_rng(rng)
+
+    def act(self, legal_action_mask, state):
+        legal_actions = np.flatnonzero(legal_action_mask)
+        return self.rng.choice(legal_actions)
+
+class PatternHeuristicAgent:
+    def __init__(self, pattern=None):
+        self.action_count = 0
+        self.pattern = pattern or [CornerCaseEnv.DOWN, CornerCaseEnv.LEFT, CornerCaseEnv.UP, CornerCaseEnv.RIGHT]
+
+    def reset(self, rng=None):
+        self.action_count = 0
+
+    def act(self, legal_action_mask, state):
+        legal_actions = np.flatnonzero(legal_action_mask)
+        action_index = self.action_count % len(self.pattern)
+        illegal_move_counter = 0
+        while self.pattern[action_index] not in legal_actions:
+            self.action_count += 1
+            action_index = self.action_count % len(self.pattern)
+            illegal_move_counter += 1
+            if illegal_move_counter > len(self.pattern):
+                raise RuntimeError("No legal actions available in the pattern")
+        self.action_count += 1
+        return self.pattern[action_index]
+
+class CornerHeuristicAgent:
+    def __init__(self):
+        pass
+
+    def reset(self, rng=None):
+        pass
+
+    def act(self, legal_action_mask, state):
+        legal_actions = np.flatnonzero(legal_action_mask)
+        for action in [CornerCaseEnv.DOWN, CornerCaseEnv.LEFT, CornerCaseEnv.RIGHT, CornerCaseEnv.UP]:
+            if action in legal_actions:
+                return action

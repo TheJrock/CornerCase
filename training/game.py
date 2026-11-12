@@ -54,7 +54,7 @@ class CornerCaseEnv():
     UP, DOWN, LEFT, RIGHT = 0, 1, 2, 3
 
     def __init__(self, rng=None):
-        self.rng = rng or np.random.default_rng()
+        self.rng = np.random.default_rng(rng)
         self.board = np.zeros((4, 4), dtype=int)
         self.cache = {}
         self.score = 0
@@ -107,7 +107,7 @@ class CornerCaseEnv():
             self.build_cache()
         mask = self.legal_action_mask()
         done = not any(mask)
-        info["legal_actions"] = mask
+        info["legal_action_mask"] = mask
         info["afterstate"] = afterstate
         return self.board.copy(), reward, done, info
 

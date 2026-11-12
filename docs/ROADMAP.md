@@ -30,10 +30,10 @@ which python                              # should end in training/.venv/bin/pyt
 
 ## 5. Baselines
 `evaluate.py`
-- [ ] Random agent
-- [ ] Corner heuristic
-- [ ] Record their mean score and max-tile distribution: these are the numbers DQN has to beat
-- [ ] Note moves per second, which tells you whether the engine is fast enough to train with
+- [x] Random agent
+- [x] Corner heuristic
+- [x] Record their mean score and max-tile distribution: these are the numbers DQN has to beat
+- [x] Note moves per second, which tells you whether the engine is fast enough to train with
 
 ## 6. DQN
 `encoding.py` → `network.py` → `replay_buffer.py` → `agent.py` → `config.py` → `train.py`

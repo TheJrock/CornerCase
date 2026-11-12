@@ -13,7 +13,7 @@ What these tests assume about CornerCaseEnv:
   - env.step(action) -> (next_state, reward, done, info). An illegal action
     leaves everything unchanged and gives a reward of 0. An action outside
     0-3 raises. info["afterstate"] is the board after the slide and before the
-    spawn, and info["legal_actions"] is the legal-action mask for next_state.
+    spawn, and info["legal_action_mask"] is the legal-action mask for next_state.
   - A tile above 32768 (exponent 15) is refused with a ValueError: by step()
     for a move that would make one, and by set_board() for a board holding one.
     set_board() also refuses negative values with a ValueError.
@@ -470,7 +470,7 @@ def step_and_check(env, action):
     assert np.array_equal(state, env.board), "next_state isn't the env's board"
 
     expected_mask = reference_mask(state)
-    assert list(info["legal_actions"]) == expected_mask, (
+    assert list(info["legal_action_mask"]) == expected_mask, (
         f"info['legal_actions'] is wrong for\n{state}\nafter {where}"
     )
     assert list(env.legal_action_mask()) == expected_mask, (
@@ -584,7 +584,7 @@ def test_results_handed_out_earlier_dont_change_later():
         state, _, _, info = env.step(action)
         keep(f"{label}: next_state", state)
         keep(f"{label}: info['afterstate']", info["afterstate"])
-        keep(f"{label}: info['legal_actions']", info["legal_actions"])
+        keep(f"{label}: info['legal_actions']", info["legal_action_mask"])
         keep(f"{label}: legal_action_mask()", env.legal_action_mask())
 
     keep("legal_action_mask() before any move", env.legal_action_mask())
@@ -613,7 +613,7 @@ def test_changing_what_step_returns_doesnt_change_the_env():
     _, _, _, info = env.step(LEFT)
     board = env.board.copy()
     info["afterstate"][:] = 0
-    info["legal_actions"][UP] = not info["legal_actions"][UP]
+    info["legal_action_mask"][UP] = not info["legal_action_mask"][UP]
     assert np.array_equal(env.board, board)
     assert list(env.legal_action_mask()) == reference_mask(board)
     step_and_check(env, first_legal_action(env))  # the cache still works
