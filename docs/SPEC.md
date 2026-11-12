@@ -35,19 +35,64 @@ The agent is trained in Python and runs in JavaScript. If anything below differs
 - Game over: no extra penalty. The TD target for the final transition is just its reward, with no bootstrap term.
 
 ## Network input
-- Range: exponents 0 to 15 (see Board → Largest tile).
-- Encoding: _e.g. one-hot per cell, K channels_
-- Shape: _e.g. [1, 16 * K] for an MLP_
-- dtype: float32
+- The board itself: 16 integer exponents (0 to 15, see Board → Largest tile), flattened in the cell order above. Shape [N, 16]. No other inputs, such as the score or the number of empty cells.
+- `encoding.py` and `encoding.js` only flatten the board. They don't one-hot it.
+- The one-hot happens inside the model, as the first step of the forward pass:
+  - K = 16 channels per cell. Channel index = exponent, so channel 0 means empty.
+  - Flat index = 16 × cell + exponent, giving [N, 256]. This is the order `F.one_hot(board, 16).flatten(1)` produces from an [N, 16] board.
+  - `F.one_hot` needs int64 input, so cast stored uint8 boards before calling it.
+- dtype: the one-hot and every layer after it are float32.
+
+Examples of the flat index:
+
+| Cell (row, col) | Tile | Exponent | Index that is 1 |
+|---|---|---|---|
+| 0 (0, 0) | empty | 0 | 0 |
+| 0 (0, 0) | 2 | 1 | 1 |
+| 1 (0, 1) | empty | 0 | 16 |
+| 5 (1, 1) | 8 | 3 | 83 |
+| 15 (3, 3) | 2048 | 11 | 251 |
+| 15 (3, 3) | 32768 | 15 | 255 |
+
+## Legal-action mask
+- bool[4] in the action-index order above, true = legal. This is what `game.py` returns in `info["legal_action_mask"]`.
+
+## Network
+- MLP: 256 → 256 → 256 → 4. ReLU after each hidden layer, nothing after the output.
+- Layer types: Linear and ReLU only. No BatchNorm (it behaves differently in training and evaluation), no dropout, no LayerNorm, so the JS forward pass needs exactly two operations.
+- Size: 133k parameters, about 0.7 MB per model file as sent (see Model file). Go to 512-wide hidden layers (396k parameters, about 2.2 MB as sent) only if training stalls. The browser fetches only the checkpoints the page actually loads.
+- Dueling head (optional): allowed only if the value and advantage streams are each a single Linear on the last hidden layer. Then Q = V + A − mean(A) is still linear in that layer, and `export.py` folds it into one [4, H] Linear, so the JS side doesn't change:
+  - W_q[i] = w_v + W_a[i] − mean_j W_a[j]
+  - b_q[i] = b_v + b_a[i] − mean_j b_a[j]
 
 ## Network output
 - Shape: [1, 4], Q-values in the action-index order above.
 - Move selection: argmax over **legal** actions only.
 
 ## Model file
-- Format: _JSON weights or ONNX?_
-- Location: `web/models/<name>`
-- Layout (if JSON): _layer names, weight shapes, row- vs column-major_
+- Runs on a hand-written JS forward pass, not ONNX.
+- Format: one JSON file per checkpoint. The browser fetches it in the background when the page loads; visitors don't do anything. At 256 wide it's about 0.7 MB as sent (GitHub Pages compresses JSON in transit). A raw float32 `.bin` would be about 0.5 MB. Switch only if you ship several 512-wide checkpoints, and then only `export.py` and the loader in `agent.js` change.
+- Location: `web/models/<name>.json`, for example `dqn-early.json`, `dqn-mid.json`, `dqn-late.json`.
+- Numbers: 9 significant digits, the fewest that load back into float32 exactly. Never round further, or the browser's Q-values drift from PyTorch's. No NaN or infinity: JSON can't hold them.
+- Structure:
+  ```
+  {
+    "meta": {"name": "dqn-late", "training_moves": …, "eval_mean_score": …},
+    "layers": [
+      {"weight": {"shape": [256, 256], "data": […]}, "bias": {"shape": [256], "data": […]}},
+      {"weight": {"shape": [256, 256], "data": […]}, "bias": {"shape": [256], "data": […]}},
+      {"weight": {"shape": [4, 256],   "data": […]}, "bias": {"shape": [4],   "data": […]}}
+    ],
+    "fixtures": [
+      {"board": [16 exponents, row-major], "q": [4 raw Q-values]}
+    ]
+  }
+  ```
+- `meta`: lets the site label each checkpoint for the "watch it learn" feature ("after 200k moves").
+- `layers`: in order from input to output. ReLU after every layer except the last (see Network). `data` is a flat array.
+- Layout: each weight is stored like PyTorch's `nn.Linear.weight`: shape [out, in], row-major, so y_i = Σ_j W[i][j] · x_j + b_i.
+- First layer: W₁ is [H, 256], where H is the hidden width. Column 16 × cell + exponent belongs to that cell and exponent. Only 16 of the 256 inputs are 1, so JS can compute layer 1 as a lookup instead of a multiply: h = b₁ + the sum, over the 16 cells, of W₁'s column 16 × cell + board[cell]. The result is the same with about 16× less work.
+- `fixtures`: a handful of boards, including some with empty cells and large tiles, with the PyTorch model's float32 Q-values for each. These are raw Q-values, before masking illegal moves. The JS forward pass must match them within a relative error of 1e-4. Keeping fixtures inside the model file means each checkpoint carries its own check and can't be paired with the wrong one.
 
 ## Golden test cases
 Boards with known correct results. Check both the Python tests and the JS engine against these.
@@ -69,4 +114,4 @@ Boards with known correct results. Check both the Python tests and the JS engine
 | 8 0 0 0 | 8 0 0 0 (not a legal move) | 0 | n/a (masked) |
 | 32768 32768 0 0 | refused: raises, board unchanged (see Board → Largest tile) | 0 | n/a |
 
-_Add more as you find edge cases. Add the Q-value fixtures from `training/export.py` here too, or link to a fixture file next to the model, so you can check the JS forward pass._
+_Add more as you find edge cases. The Q-value fixtures for checking the JS forward pass live inside each model file (see Model file)._

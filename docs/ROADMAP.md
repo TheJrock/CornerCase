@@ -37,18 +37,23 @@ which python                              # should end in training/.venv/bin/pyt
 
 ## 6. DQN
 `encoding.py` → `network.py` → `replay_buffer.py` → `agent.py` → `config.py` → `train.py`
-- [ ] Remaining SPEC decisions: encoding, reward, network shape
-- [ ] Replay buffer stores the afterstate (after the slide, before the spawn) as well as the next state, so step 10 needs no buffer changes
+- [x] Remaining SPEC decisions: encoding, reward, network shape
+- [ ] `encoding.py` only flattens boards to [N, 16]. The one-hot is the first step of the forward pass in `network.py` (see SPEC.md → Network input)
+- [ ] Replay buffer stores raw uint8 boards, [capacity, 16] each, for the state, the afterstate (after the slide, before the spawn) and the next state, so step 10 needs no buffer changes. The network does the one-hot on each sampled batch, so the buffer never holds encoded boards: 1M transitions take about 48 MB raw, against about 3 GB encoded
+- [ ] Device is a `config.py` setting, and the code runs on either `cpu` or `mps`. Train on CPU: on the M1 Pro with this network, the GPU was 15× slower at choosing a move and slower at batch-512 learning steps (benchmarked 2026-11-11). Benchmark again if the network grows a lot
 - [ ] Short end-to-end run with a tiny config (finds bugs in minutes instead of hours)
 - [ ] Full training run, keeping checkpoints from early, mid and late in training
 - [ ] Beats the corner heuristic in `evaluate.py`
 
+Learning steps limit training speed, not the engine: about 430 per second at batch 512 on CPU, against about 33,000 game moves per second. How many moves you play per learning step (set in `config.py`) mostly decides how long a run takes.
+
 ## 7. Web demo (you can start this while step 6 trains)
-- [ ] `export.py` writes the model and Q-value fixtures to `web/models/`
+- [x] Choose the model file format: one JSON file per checkpoint (SPEC.md → Model file)
+- [ ] `export.py` writes each checkpoint to one JSON file in `web/models/`, with its metadata and Q-value fixtures, folding a dueling head into one Linear if you added one (SPEC.md → Network)
 - [ ] `game.js` passes the golden test cases in SPEC.md
 - [ ] `renderer.js` + `main.js`: a human can play with the arrow keys
-- [ ] `encoding.js` + `agent.js`: Q-values match the fixtures from `export.py`
-- [ ] The agent plays in the browser
+- [ ] `encoding.js` flattens the board. `agent.js` is a hand-written forward pass that computes the first layer as a lookup (SPEC.md → Model file). Q-values match the fixtures inside the model file
+- [ ] The agent plays in the browser: on page load a game starts on a random seed, and the agent plays on its own once the model has loaded. Visitors don't have to click anything
 
 Test locally with `cd web && python -m http.server 8000`, then open http://localhost:8000. Opening `index.html` directly won't work.
 
@@ -66,6 +71,7 @@ If you add the DNS record before the repo claims the subdomain, someone else can
 A second, non-neural agent to compare DQN against, side by side in the browser.
 - [ ] Afterstate TD(0) learner: a few tuples, each shared across the 8 board symmetries
 - [ ] Tuple sizes small enough to ship to the browser (a 4-tuple table is 256 KB, a 6-tuple table is 64 MB)
+- [ ] Reuse `game.py`'s packed row index (4 bits per cell, `board @ WEIGHTS`) as the table index: a row or column is already a 4-tuple index
 - [ ] Engine fast enough for ~10⁸ training moves (numba or a bitboard engine)
 - [ ] DQN vs. n-tuple in `evaluate.py` on the same set of seeds
 - [ ] Browser: both agents play side by side from the same seed

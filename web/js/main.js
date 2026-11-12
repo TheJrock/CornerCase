@@ -2,8 +2,11 @@
   Entry point that connects everything. Loaded by index.html.
 
   Responsibilities:
-    - Load the agent's model on startup and show a loading state until it's ready.
-    - Create a game and render it.
+    - Start playing on page load, with no clicks needed: create a game on a
+      random seed and draw it right away, while the model file loads in the
+      background (the latest checkpoint, if you ship several). Show a small
+      loading indicator until the model is ready, then the agent starts
+      playing on its own.
     - The play loop: on a timer, ask the agent for a move, apply it, render,
       and stop at game over.
     - Hook up the controls: play/pause, step, speed, new game (and keyboard
