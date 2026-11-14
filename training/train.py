@@ -10,9 +10,11 @@ Responsibilities:
     few moves) sample a batch and learn -> periodically sync the target network.
   - Store the afterstate with each transition. game.py returns it in
     info["afterstate"], and replay_buffer.py explains why it's kept.
-  - Decay epsilon over time.
-  - Log progress: episode score, max tile, loss, epsilon (print, CSV, or
-    TensorBoard writing to training/runs/).
+  - Act epsilon-greedy from the very first move, warm-up included, using the
+    epsilon schedule in config.py (baseline: fixed 0.1). Count the schedule
+    in environment steps from the start of the run.
+  - Log progress: episode score, max tile, loss, and epsilon in runs where
+    it decays (print, CSV, or TensorBoard writing to training/runs/).
   - Periodically run a greedy evaluation on one fixed set of seeds, so runs
     can be compared fairly (roadmap step 10 depends on this).
   - Save checkpoints to training/checkpoints/, together with the config that

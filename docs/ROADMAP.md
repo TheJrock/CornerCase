@@ -38,8 +38,10 @@ which python                              # should end in training/.venv/bin/pyt
 ## 6. DQN
 `encoding.py` → `network.py` → `replay_buffer.py` → `agent.py` → `config.py` → `train.py`
 - [x] Remaining SPEC decisions: encoding, reward, network shape
-- [ ] `encoding.py` only flattens boards to [N, 16]. The one-hot is the first step of the forward pass in `network.py` (see SPEC.md → Network input)
+- [ ] `encoding.py` only flattens boards to [N, 16]. The one-hot is the first step of the forward pass in `network.py` (see SPEC.md → Network input). Once it's done, remove the placeholder flatten in `ReplayBuffer.add()` and flatten in `train.py` instead
 - [ ] Replay buffer stores raw uint8 boards, [capacity, 16] each, for the state, the afterstate (after the slide, before the spawn) and the next state, so step 10 needs no buffer changes. The network does the one-hot on each sampled batch, so the buffer never holds encoded boards: 1M transitions take about 48 MB raw, against about 3 GB encoded
+- [ ] `sample(batch_size)` samples with replacement, drawing every index in one vectorized call: about 0.04 ms per batch of 512, against about 7 ms when each transition is drawn separately from a deque, which is longer than the 2.3 ms learning step itself (benchmarked 2026-11-11)
+- [ ] Exploration: a fixed epsilon of 0.1, no decay, as the baseline (step 12 compares it with a decay). Random tile spawns already vary the boards a lot, so the agent needs little extra exploration. The agent acts epsilon-greedy from the first move, warm-up included. Evaluation still runs at epsilon = 0
 - [ ] Device is a `config.py` setting, and the code runs on either `cpu` or `mps`. Train on CPU: on the M1 Pro with this network, the GPU was 15× slower at choosing a move and slower at batch-512 learning steps (benchmarked 2026-11-11). Benchmark again if the network grows a lot
 - [ ] Short end-to-end run with a tiny config (finds bugs in minutes instead of hours)
 - [ ] Full training run, keeping checkpoints from early, mid and late in training
@@ -86,4 +88,23 @@ Does removing the randomness of the spawn from the target speed up learning? Eve
 - [ ] 3 to 5 training seeds per mode, compared at equal environment steps, with wall-clock time noted
 - [ ] Periodic greedy evaluation on one fixed set of evaluation seeds for every run
 - [ ] Logged per run: evaluation score and max tile, TD loss, TD-error spread, and predicted Q against the actual return
+- [ ] A short write-up of what you found
+
+## 11. Experiment: replay warm-up length (any time after step 6)
+Does learning from the very first transition help or hurt? Learning starts once `len(buffer) >= warmup`, and everything else stays the same.
+- [ ] `warmup` values: 1 (learn from the first transition), `batch_size`, about 10,000, about 50,000 (the original DQN paper's replay start size)
+- [ ] Count environment steps from the start of each run, warm-up included, so a long warm-up doesn't get free moves
+- [ ] Every run uses the baseline fixed epsilon of 0.1, during warm-up as well
+- [ ] 3 to 5 training seeds per value, compared at equal environment steps, with wall-clock time noted
+- [ ] Same periodic greedy evaluation on the fixed evaluation seeds as step 10
+- [ ] Logged per run: evaluation score and max tile over environment steps, and TD loss over the first few thousand learning steps, where small warm-ups should differ most
+- [ ] A short write-up of what you found
+
+## 12. Experiment: fixed vs. decaying epsilon (any time after step 6)
+Does starting almost fully random and decaying help, given that tile spawns already add a lot of randomness? Everything except the epsilon schedule stays the same.
+- [ ] Two arms: fixed 0.1 (the baseline), and a linear decay from 0.99 to 0.1 over the first 10% of the run's environment steps, then 0.1 for the rest
+- [ ] Both arms use the same warm-up: the one step 11 favours, or the baseline's if this runs first
+- [ ] 3 to 5 training seeds per arm, compared at equal environment steps, with wall-clock time noted
+- [ ] Same periodic greedy evaluation on the fixed evaluation seeds as step 10
+- [ ] Logged per run: evaluation score and max tile over environment steps, epsilon, and the highest tile reached in training games
 - [ ] A short write-up of what you found

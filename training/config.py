@@ -7,9 +7,18 @@ results later.
 
 Things that typically live here:
   - learning rate, discount factor (gamma), batch size
-  - replay buffer capacity, warm-up steps before learning starts
+  - replay buffer capacity, warm-up transitions before learning starts
+    (compared in roadmap step 11, so keep it a plain setting)
   - how many game moves to play per learning step
-  - epsilon schedule (start, end, decay steps)
+  - epsilon schedule: start, end, and the fraction of the run to decay over.
+    The baseline is fixed at 0.1 (start = end = 0.1, 10% random moves), since
+    tile spawns already push the agent into varied boards. Roadmap step 12
+    compares it with a linear decay from 0.99 to 0.1 over the first 10% of
+    the run's environment steps, then 0.1 for the rest:
+        epsilon = start + (end - start) * min(1, step / (0.1 * total_steps))
+    With start = end the formula stays at 0.1, so one setting covers both
+    arms. Store the 10% as a fraction rather than a step count, so the tiny
+    test config decays over its own short run
   - target network sync frequency (hard copy every N steps, or soft update tau)
   - total training steps/episodes, eval frequency, checkpoint frequency
   - random seed, and the fixed set of evaluation seeds
